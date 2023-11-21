@@ -29,15 +29,14 @@ function updateGroup(groups, grouping, row, id)
 end
 
 function writeline(...)
+  local x, y = term.getCursorPos()
   local toPrint = ""
-  for _, val in pairs(arg) do
-    toPrint = toPrint..val
+  for i = 1, #arg do
+    toPrint = toPrint..arg[i]
   end
   
-  term.write(toPrint)
-  
-  local pos = term.getCursorPos()
-  term.setCursorPos(pos[0], pos[1]+1)
+  term.write(toPrint.."")
+  term.setCursorPos(x, y + 1)
 end
 
 function get_groupings()
@@ -72,13 +71,13 @@ end
 
 function startup()
   clear()
-  print("Starting Up NucleBrain.")
+  writeline("Starting Up NucleBrain.")
   reactor.setActive(true)
-  print("Reactor Online.")
-  print("Control Rods Engaged At: "..reactor.getControlRod(0).level().."% Insertion.")
+  writeline("Reactor Online.")
+  writeline("Control Rods Engaged At: "..reactor.getControlRod(0).level().."% Insertion.")
   
   local b = reactor.battery().stored()
-  print("Startup Complete.")
+  writeline("Startup Complete.")
   
   sleep(0.25)
   return b
@@ -86,13 +85,13 @@ end
 
 function shutdown()
   clear()
-  print("Shutting Down NucleBrain.")
+  writeline("Shutting Down NucleBrain.")
   
   reactor.setAllControlRodLevels(100)
-  print("Control Rods Disengaged.")
+  writeline("Control Rods Disengaged.")
   
   reactor.setActive(false)
-  print("Reactor Disabled.\n Have a nice day.")
+  writeline("Reactor Disabled.\n Have a nice day.")
   
   sleep(0.5)
   clear()
@@ -118,12 +117,12 @@ end
 
 function gui()
   clear()
-  print("-----NucleBrain V1.0.0-----")
-  print("Reactor Status: "..status())
-  print("RF Output: "..reactor.battery().producedLastTick().." RF/t")
-  print("Average Insertion: "..avgControlRodLevel().."%")
-  print("Fuel Cons.: "..reactor.fuelTank().burnedLastTick().." mB/t")
-  print("Quit: 'x', Toggle Power: 't'")
+  writeline("-----NucleBrain V1.0.0-----")
+  writeline("Reactor Status: "..status())
+  writeline("RF Output: "..reactor.battery().producedLastTick().." RF/t")
+  writeline("Average Insertion: "..avgControlRodLevel().."%")
+  writeline("Fuel Cons.: "..reactor.fuelTank().burnedLastTick().." mB/t")
+  writeline("Quit: 'x', Toggle Power: 't'")
 end
 
 function handleEvents()
@@ -159,17 +158,18 @@ function main()
   while true do
     gui()
     
-    local x = 1
+    local x = 0
     for rod, id in pairs(groups[groupKeys[hotGroup]]) do
-      local l = reactor.getControlRod(id).level()
-      if (rf_delta() > 0 and l < 100) then
-        reactor.getControlRod(id).setLevel(l + 1)
-      elseif (l > 0) then
-        reactor.getControlRod(id).setLevel(l - 1)
+      local level = reactor.getControlRod(id).level()
+	  
+      if (rf_delta() > 0 and level < 100) then
+        reactor.getControlRod(id).setLevel(level + 1)
+      elseif (level > 0) then
+        reactor.getControlRod(id).setLevel(level - 1)
       end
-        
+	  
       if x == #groups[groupKeys[(hotGroup)]] then
-        if (l == 0 and rf_delta() <= 0) or l == 100 then
+        if (level <= 0 and rf_delta() <= 0) or level == 100 then
           hotGroup = hotGroup + 1
         end
       end
