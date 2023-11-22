@@ -23,6 +23,15 @@ function get_rods()
   return rods
 end
 
+function getn_keyed(tab)
+  local x = 0
+  for _, _ in pairs(tab) do
+    x = x + 1
+  end
+  
+  return x
+end
+
 function updateGroup(groups, grouping, row, id)
   groups[grouping][row] = id
   return groups
@@ -72,9 +81,12 @@ end
 function startup()
   clear()
   writeline("Starting Up NucleBrain.")
+  
+  reactor.setAllControlRodLevels(100)
+  writeline("Control Rods Engaged At: "..reactor.getControlRod(0).level().."% Insertion.")
+  
   reactor.setActive(true)
   writeline("Reactor Online.")
-  writeline("Control Rods Engaged At: "..reactor.getControlRod(0).level().."% Insertion.")
   
   local b = reactor.battery().stored()
   writeline("Startup Complete.")
@@ -145,7 +157,9 @@ local groups = get_groupings()
 local keys = {}
 local groupKeys = {}
 
-function main()
+function init()
+  groups = get_groupings()
+
   for group, rods in pairs(groups) do
     for rod in pairs(rods) do
       table.insert(keys, rod)
@@ -153,14 +167,18 @@ function main()
     
     table.insert(groupKeys, group)
   end
-  
+end
+
+function main()
+  init()
+  local isStartup = true --This keeps other groups from eroniously firing prematurely
   local hotGroup = 1
+  
   while true do
-    gui()
-    
-    local x = 0
+	gui()
+	local x = 0
     for rod, id in pairs(groups[groupKeys[hotGroup]]) do
-      local level = reactor.getControlRod(id).level()
+      level = reactor.getControlRod(id).level()
 	  
       if (rf_delta() > 0 and level < 100) then
         reactor.getControlRod(id).setLevel(level + 1)
@@ -168,15 +186,22 @@ function main()
         reactor.getControlRod(id).setLevel(level - 1)
       end
 	  
-      if x == #groups[groupKeys[(hotGroup)]] then
-        if (level <= 0 and rf_delta() <= 0) or level == 100 then
+	  x = x + 1
+	  
+      if (x >= getn_keyed(groups[groupKeys[(hotGroup)]]) and not isStartup) then
+        if (level <= 0 and rf_delta() <= 0) or level >= 100 then
           hotGroup = hotGroup + 1
         end
+	  elseif isStartup then
+	    isStartup = false
       end
-        
-      x = x + 1
-      sleep(0.25)
     end
+	
+	sleep(0.1)
+	
+	if hotGroup > getn_keyed(groups) then
+	  hotGroup = 1
+	end
   end
 end
 
